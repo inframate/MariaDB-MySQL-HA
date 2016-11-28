@@ -6,7 +6,7 @@ VM=`cat /etc/hostname`
 printf "\n>>>\n>>> WORKING ON: $VM ...\n>>>\n\n>>>\n>>> (STEP 1/6) Configuring system ...\n>>>\n\n\n"
 sleep 5
 sed -ri 's/127\.0\.0\.1\s.*/127.0.0.1 localhost localhost.localdomain/' /etc/hosts
-echo 'root:devops' | chpasswd
+echo 'root:mariadb' | chpasswd
 sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config && service sshd restart
 sed -i 's/SELINUX=enforcing/SELINUX=disabled/' /etc/sysconfig/selinux
 echo 0 > /sys/fs/selinux/enforce
@@ -21,8 +21,8 @@ systemctl start mariadb && systemctl enable mariadb
 mysql_secure_installation <<EOF
 
 y
-devops
-devops
+mariadb
+mariadb
 y
 y
 y
@@ -31,36 +31,36 @@ EOF
 
 printf "\n>>>\n>>> (STEP 3/6) Configuring MariaDB Master1...\n>>>\n\n"
 sleep 5
-mysql -uroot -pdevops -e 'CREATE DATABASE zabbix;' \
+mysql -uroot -pmariadb -e 'CREATE DATABASE zabbix;' \
 -e "GRANT ALL PRIVILEGES ON zabbix.* TO 'zabbix'@'%' IDENTIFIED BY 'zabbix';" \
 -e 'FLUSH PRIVILEGES;'
-mysql -uroot -pdevops zabbix < /sources/$CONFIG/create.sql
+mysql -uroot -pmariadb zabbix < /sources/$CONFIG/create.sql
 
-mysql -uroot -pdevops -e 'STOP SLAVE;' \
+mysql -uroot -pmariadb -e 'STOP SLAVE;' \
 -e "GRANT REPLICATION SLAVE ON *.* TO 'zabbix'@'%' IDENTIFIED BY 'zabbix';" \
 -e 'FLUSH PRIVILEGES;' \
 -e 'FLUSH TABLES WITH READ LOCK;'
-mysql -uroot -pdevops -e 'SHOW MASTER STATUS\g' > /sources/$CONFIG/master1_status
+mysql -uroot -pmariadb -e 'SHOW MASTER STATUS\g' > /sources/$CONFIG/master1_status
 
-mysql -uroot -pdevops -e 'STOP SLAVE;'
+mysql -uroot -pmariadb -e 'STOP SLAVE;'
 MASTERLOGFILE=$(grep mariadb /sources/$CONFIG/master2_status | awk '{print $1}')
 MASTERLOGPOS=$(grep mariadb /sources/$CONFIG/master2_status | awk '{print $2}')
-mysql -uroot -pdevops -e "CHANGE MASTER TO MASTER_HOST='mariadb-master2.devops.com', MASTER_USER='zabbix', MASTER_PASSWORD='zabbix', MASTER_LOG_FILE='$MASTERLOGFILE', MASTER_LOG_POS=$MASTERLOGPOS"
-mysql -uroot -pdevops -e 'SLAVE START;'
-sleep 2 && mysql -uroot -pdevops -e 'SHOW SLAVE STATUS\G;' | grep "Running"
+mysql -uroot -pmariadb -e "CHANGE MASTER TO MASTER_HOST='mariadb-master2.domain.com', MASTER_USER='zabbix', MASTER_PASSWORD='zabbix', MASTER_LOG_FILE='$MASTERLOGFILE', MASTER_LOG_POS=$MASTERLOGPOS"
+mysql -uroot -pmariadb -e 'SLAVE START;'
+sleep 2 && mysql -uroot -pmariadb -e 'SHOW SLAVE STATUS\G;' | grep "Running"
 #give root remote access from other cluster members
-mysql -uroot -pdevops -e "GRANT ALL PRIVILEGES ON *.* TO 'root'@'mariadb-master2.devops.com' IDENTIFIED BY 'devops' WITH GRANT OPTION;"
+mysql -uroot -pmariadb -e "GRANT ALL PRIVILEGES ON *.* TO 'root'@'mariadb-master2.domain.com' IDENTIFIED BY 'mariadb' WITH GRANT OPTION;"
 
 
 
 printf "\n>>>\n>>> (STEP 4/6) Configuring MariaDB Master2 Remotely from Master1...\n>>>\n\n"
 sleep 5
-mysql -h mariadb-master2.devops.com -uroot -pdevops -e 'STOP SLAVE;'
+mysql -h mariadb-master2.domain.com -uroot -pmariadb -e 'STOP SLAVE;'
 MASTERLOGFILE=$(grep mariadb /sources/$CONFIG/master1_status | awk '{print $1}')
 MASTERLOGPOS=$(grep mariadb /sources/$CONFIG/master1_status | awk '{print $2}')
-mysql -h mariadb-master2.devops.com -uroot -pdevops -e "CHANGE MASTER TO MASTER_HOST='mariadb-master1.devops.com', MASTER_USER='zabbix', MASTER_PASSWORD='zabbix', MASTER_LOG_FILE='$MASTERLOGFILE', MASTER_LOG_POS=$MASTERLOGPOS"
-mysql -h mariadb-master2.devops.com -uroot -pdevops -e 'SLAVE START;'
-sleep 2 && mysql -h mariadb-master2.devops.com -uroot -pdevops -e 'SHOW SLAVE STATUS\G;' | grep "Running"
+mysql -h mariadb-master2.domain.com -uroot -pmariadb -e "CHANGE MASTER TO MASTER_HOST='mariadb-master1.domain.com', MASTER_USER='zabbix', MASTER_PASSWORD='zabbix', MASTER_LOG_FILE='$MASTERLOGFILE', MASTER_LOG_POS=$MASTERLOGPOS"
+mysql -h mariadb-master2.domain.com -uroot -pmariadb -e 'SLAVE START;'
+sleep 2 && mysql -h mariadb-master2.domain.com -uroot -pmariadb -e 'SHOW SLAVE STATUS\G;' | grep "Running"
 
 printf "\n>>>\n>>> (STEP 5/6) Installing Pacemaker & Corosync ...\n>>>\n\n"
 sleep 5
@@ -72,7 +72,7 @@ for SERVICE in pcsd corosync pacemaker; do systemctl enable $SERVICE; done
 
 printf "\n>>>\n>>> (STEP 6/6) Configuring MariaDB cluster functionality ...\n>>>\n\n"
 sleep 5
-pcs cluster auth mariadb-master1.devops.com mariadb-master2.devops.com <<EOF
+pcs cluster auth mariadb-master1.domain.com mariadb-master2.domain.com <<EOF
 hacluster
 hacluster
 EOF
@@ -80,7 +80,7 @@ EOF
 #Disable automatic launch of mariadb.service
 systemctl disable mariadb.service
 
-pcs cluster setup --name mariadb-server mariadb-master2.devops.com mariadb-master1.devops.com
+pcs cluster setup --name mariadb-server mariadb-master2.domain.com mariadb-master1.domain.com
 pcs cluster start --all
 pcs status cluster
 pcs property set stonith-enabled=false
@@ -95,4 +95,4 @@ rm -f /sources/$CONFIG/master2_status
 rm -f /sources/$CONFIG/master1_status
 
 
-printf "\n>>>\n>>> Finished bootstrapping $VM\n>>>\n\n>>> MariaDB is reachable via:\n>>> USERNAME: root\n>>> PASSWORD: devops\n"
+printf "\n>>>\n>>> Finished bootstrapping $VM\n>>>\n\n>>> MariaDB is reachable via:\n>>> USERNAME: root\n>>> PASSWORD: mariadb\n"
