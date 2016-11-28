@@ -34,7 +34,7 @@ This Vagrant will create 2 2 CentOS/7 nodes:
       
       - Configure the 2 DB servers as MASTERS with MASTER-MASTER replication,
       
-      - Configure Pacemaker as an Active/Standby cluster with a floating cluster_VIP and 2 actives MariaDB(MYSQL) instances
-        (1 instance on each node).
+      - Configure Pacemaker as an Active/Standby cluster with a floating cluster_VIP 
+      - and 2 actives MariaDB(MYSQL) instances (1 instance on each node).
 
 
