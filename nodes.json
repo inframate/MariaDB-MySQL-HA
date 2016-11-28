@@ -1,7 +1,7 @@
 {
   "nodes": {
     "mariadb-master2.domain.com": {
-      ":ip": "192.168.144.18",
+      ":ip": "192.168.1.102",
       "ports": [],
       ":cpus": 1,
       ":memory": 512,
@@ -9,7 +9,7 @@
       ":bootstrap": "bootstrap-mariadb-master2.sh"
     },
     "mariadb-master1.domain.com": {
-      ":ip": "192.168.144.19",
+      ":ip": "192.168.1.101",
       "ports": [],
       ":cpus": 1,
       ":memory": 512,
