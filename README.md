@@ -8,5 +8,5 @@ This Vagrant will :
 - install MAriaDB(MySQL), 
 - install Pacemaker, 
 - create a DB for Zabbix,
-- Configure the 2 MySQL servers as MASTERS with MASTER-MASTER replication.
-- Configure Pacemaker as an Active/STandby cluster with a floating cluster_VIP and 2 actives MYSQL instances(1 instance on each node)
+- Configure the 2 DB servers as MASTERS with MASTER-MASTER replication.
+- Configure Pacemaker as an Active/Standby cluster with a floating cluster_VIP and 2 actives MariaDB(MYSQL) instances(1 instance on each node)
