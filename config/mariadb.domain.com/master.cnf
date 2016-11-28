@@ -1,0 +1,6 @@
+[mysqld]
+server_id=1
+log-basename=master
+log-bin
+binlog-format=row
+binlog-do-db=zabbix
