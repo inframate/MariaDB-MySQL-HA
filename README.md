@@ -4,6 +4,7 @@ Architecture
 ![mariadb-master-master-active-standby](https://cloud.githubusercontent.com/assets/23556472/20674300/62d70842-b556-11e6-98e3-87312c6b8329.png)
 
 This Vagrant will create 2 2 CentOS/7 nodes:
+
 1-firstnode:
 
       - install MariaDB(MySQL), 
